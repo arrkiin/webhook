@@ -478,6 +478,16 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+	case len(body) == 0:
+		var asBody strings.Builder
+		if len(r.URL.Path) > 0 {
+			asBody.WriteString(r.URL.Path)
+		}
+		if len(r.URL.RawQuery) > 0 {
+			asBody.WriteString(fmt.Sprintf("?%s", r.URL.RawQuery))
+		}
+		body = []byte(asBody.String())
+
 	default:
 		log.Printf("[%s] error parsing body payload due to unsupported content type header: %s\n", rid, contentType)
 	}
