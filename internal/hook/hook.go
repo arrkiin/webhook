@@ -26,6 +26,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/sprig"
 	"github.com/ghodss/yaml"
 )
 
@@ -694,12 +695,20 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 	}
 
 	if asTemplate {
-		funcMap := template.FuncMap{"getenv": getenv}
 
-		tmpl, err := template.New("hooks").Funcs(funcMap).Parse(string(file))
-		if err != nil {
-			return err
+		tmpl := template.New("hooks")
+		var funcMap template.FuncMap = map[string]interface{}{}
+		funcMap["getenv"] = getenv
+		// copied from: https://github.com/helm/helm/blob/8648ccf5d35d682dcd5f7a9c2082f0aaf071e817/pkg/engine/engine.go#L147-L154
+		funcMap["include"] = func(name string, data interface{}) (string, error) {
+			buf := bytes.NewBuffer(nil)
+			if err := tmpl.ExecuteTemplate(buf, name, data); err != nil {
+				return "", err
+			}
+			return buf.String(), nil
 		}
+
+		tmpl, err := tmpl.Funcs(sprig.TxtFuncMap()).Funcs(funcMap).Parse(string(file))
 
 		var buf bytes.Buffer
 
